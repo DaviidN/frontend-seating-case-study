@@ -10,11 +10,150 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu.tsx';
+import {
+	Popover,
+	PopoverContent,
+	PopoverTrigger
+} from '@/components/ui/popover';
+import { useState, useEffect } from "react";
 import './App.css';
 
+ interface Session {
+    message: string,
+	user: {
+		firstName: string,
+		lastName: string,
+		email: string
+		}
+  }
+
+  interface EventInfo {
+	eventId: number,
+	namePub: string,
+	description: string,
+	currencyIso: string,
+	dateFrom: Date,
+	dateTo: Date,
+	headerImageUrl: string,
+	place: string
+  }
+
+  interface EventTickets{
+	ticketTypes: [
+	{
+		id: number,
+		name: string,
+		price: number
+	}],
+	seatRows: [
+	{
+		seatRow: number,
+		seats: [
+		{
+			seatId: number,
+			place: number,
+			ticketTypeId: number
+		}]
+	}]
+  }
+  
+
 function App() {
-	const isLoggedIn = false;
+	const userPassword = "Nfctron2025" 
+	const userEmail = "frontend@nfctron.com"
+	const [userSess, setUserSess] = useState<Session[]>([]);
+	const [isOpen, setIsOpen] = useState(false);
+	const [isLoggedIn, setIsLoggedIn] = useState(false);
+	const [eventInfo, setEventInfo] = useState<EventInfo[]>([]);
+	const [eventTickets, setEventTickets] = useState<EventTickets[]>([]);
 	
+
+	async function sendLogInfo(userEmail: string, userPassword: string) {
+
+		try{
+        const response = await fetch("https://nfctron-frontend-seating-case-study-2024.vercel.app/login", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ email: userEmail, password: userPassword })
+        });
+
+        const user = await response.json();
+		
+		localStorage.setItem("session", JSON.stringify(user));
+		setUserSess([user]);
+		setIsLoggedIn(true)
+
+		} catch(e){
+			console.error(e)
+		} 
+	}
+
+	async function getEvent (){
+		try{
+			const response = await fetch("https://nfctron-frontend-seating-case-study-2024.vercel.app/event")
+			const event = await response.json()
+
+			setEventInfo([event]);	
+
+		} catch(e){
+			console.error(e)
+		} 
+	}
+
+	async function getEventTickets (eventId: number){
+		try{
+			const response = await fetch(`https://nfctron-frontend-seating-case-study-2024.vercel.app/event-tickets?eventId=${eventId}`)
+			const tickets = await response.json()
+
+			setEventTickets([tickets])
+			console.log(eventTickets);
+
+
+		} catch(e){
+			console.error(e)
+		}
+	}
+
+	useEffect(() => {
+		getUser();
+		getEvent();
+	}, [])
+
+	useEffect(() => {
+		if (eventInfo[0]?.eventId) { 
+			getEventTickets(eventInfo[0].eventId);
+		}
+	}, [eventInfo])
+	
+	useEffect(() => {
+		if (isLoggedIn) {
+			setIsOpen(true);
+		
+			const timer = setTimeout(() => {
+				setIsOpen(false); 
+				setIsLoggedIn(false)
+			}, 2000);
+
+			return () => clearTimeout(timer);
+		}
+	}, [isLoggedIn]);  
+
+	function Logout () {
+        localStorage.clear();
+        window.location.reload();
+    }
+	
+	function getUser() {
+		const sessionString = localStorage.getItem("session");
+
+		if (!sessionString) {
+			return null
+		}
+		return setUserSess([JSON.parse(sessionString)]);	
+	}
+
 	return (
 		<div className="flex flex-col grow">
 			{/* header (wrapper) */}
@@ -29,41 +168,53 @@ function App() {
 					<div className="bg-zinc-100 rounded-md h-8 w-[200px]" />
 					{/* user menu */}
 					<div className="max-w-[250px] w-full flex justify-end">
-						{
-							isLoggedIn ? (
-								<DropdownMenu>
-									<DropdownMenuTrigger asChild>
-										<Button variant="ghost">
-											<div className="flex items-center gap-2">
-												<Avatar>
-													<AvatarImage src={`https://source.boringavatars.com/marble/120/<user-email>?colors=25106C,7F46DB`} />
-													<AvatarFallback>CN</AvatarFallback>
-												</Avatar>
-												
-												<div className="flex flex-col text-left">
-													<span className="text-sm font-medium">John Doe</span>
-													<span className="text-xs text-zinc-500">john.doe@nfctron.com</span>
-												</div>
-											</div>
-										</Button>
-									</DropdownMenuTrigger>
-									<DropdownMenuContent className="w-[250px]">
-										<DropdownMenuLabel>John Doe</DropdownMenuLabel>
-										<DropdownMenuSeparator />
-										<DropdownMenuGroup>
-											<DropdownMenuItem disabled>
-												Logout
-											</DropdownMenuItem>
-										</DropdownMenuGroup>
-									</DropdownMenuContent>
-								</DropdownMenu>
-							) : (
-								<Button disabled variant="secondary">
-									Login or register
-								</Button>
+						{ 
+							userSess[0] ? (
+								<>
+								{userSess.map((props, key) => (									
+								<div key={key}>
+									<Popover open={isOpen} onOpenChange={setIsOpen}>	
+										<PopoverTrigger>
+										</PopoverTrigger>
+										<PopoverContent > 
+											<p>{props.message}</p>
+										</PopoverContent>
+									</Popover>		
+									<DropdownMenu>
+										<DropdownMenuTrigger asChild>
+											<Button variant="secondary">
+													<div className="flex items-center gap-2">
+														<Avatar>
+															<AvatarImage src={`https://source.boringavatars.com/marble/120/${props.user.email}?colors=25106C,7F46DB`} />
+															<AvatarFallback>CN</AvatarFallback>
+														</Avatar>
+														<div className="flex flex-col text-left">
+															<span className="text-sm font-medium">{`${props.user.firstName} ${props.user.lastName}`}</span>
+															<span className="text-xs text-zinc-500">{props.user.email}</span>
+														</div>
+													</div>
+											</Button>
+										</DropdownMenuTrigger>						
+										<DropdownMenuContent className="w-[250px]">
+											<DropdownMenuLabel>{`${props.user.firstName} ${props.user.lastName}`}</DropdownMenuLabel>
+											<DropdownMenuSeparator />
+											<DropdownMenuGroup>
+												<DropdownMenuItem onClick={() => Logout ()}>
+													Logout
+												</DropdownMenuItem>
+											</DropdownMenuGroup>
+										</DropdownMenuContent>
+										</DropdownMenu>
+									</div>
+									))}
+									</>
+							) : (	
+								<Button variant="secondary" onClick={() => sendLogInfo(userEmail, userPassword)}>
+									Login or register 
+								</Button>			
 							)
 						}
-					</div>
+						</div>
 				</div>
 			</nav>
 			
@@ -85,18 +236,21 @@ function App() {
 					</div>
 					
 					{/* event info */}
-					<aside className="w-full max-w-sm bg-white rounded-md shadow-sm p-3 flex flex-col gap-2">
+					{eventInfo.map((props)=>(
+
+						<aside key={props.eventId} className="w-full max-w-sm bg-white rounded-md shadow-sm p-3 flex flex-col gap-2">
 						{/* event header image placeholder */}
-						<div className="bg-zinc-100 rounded-md h-32" />
+						<img className="bg-zinc-100 rounded-md h-50" src={props.headerImageUrl}  />
 						{/* event name */}
-						<h1 className="text-xl text-zinc-900 font-semibold">[event-name]</h1>
+						<h1 className="text-xl text-zinc-900 font-semibold">{props.namePub}</h1>
 						{/* event description */}
-						<p className="text-sm text-zinc-500">[event-description]: Lorem ipsum dolor sit amet, consectetur adipisicing elit. Aliquam aliquid asperiores beatae deserunt dicta dolorem eius eos fuga laborum nisi officia pariatur quidem repellendus, reprehenderit sapiente, sed tenetur vel voluptatibus?</p>
+						<p className="text-sm text-zinc-500">{props.description}</p>
 						{/* add to calendar button */}
-						<Button variant="secondary" disabled>
+						<Button variant="secondary">
 							Add to calendar
 						</Button>
-					</aside>
+						</aside>
+					))}
 				</div>
 			</main>
 			
@@ -106,12 +260,12 @@ function App() {
 				<div className="max-w-screen-lg p-6 flex justify-between items-center gap-4 grow">
 					{/* total in cart state */}
 					<div className="flex flex-col">
-						<span>Total for [?] tickets</span>
-						<span className="text-2xl font-semibold">[?] CZK</span>
+						<span className="text-zinc-500">Total for [?] tickets</span>
+						<span className="text-2xl font-semibold text-zinc-900  ">[?] {eventInfo[0]?.currencyIso}</span>
 					</div>
 					
 					{/* checkout button */}
-					<Button disabled variant="default">
+					<Button variant="default">
 						Checkout now
 					</Button>
 				</div>
