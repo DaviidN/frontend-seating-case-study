@@ -17,14 +17,17 @@ import {
 } from '@/components/ui/popover';
 import { useState, useEffect } from "react";
 import './App.css';
+import profilePic from "./imgs/Profilovy_obrazek1.jpg"
 
  interface Session {
     message: string,
-	user: {
-		firstName: string,
-		lastName: string,
-		email: string
-		}
+	user: User
+  }
+
+  interface User {
+	firstName: string,
+	lastName: string,
+	email: string,
   }
 
   interface EventInfo {
@@ -38,35 +41,52 @@ import './App.css';
 	place: string
   }
 
-  interface EventTickets{
-	ticketTypes: [
-	{
-		id: number,
+interface EventTickets{
+	ticketTypes: [{
+		id: string,
 		name: string,
 		price: number
 	}],
-	seatRows: [
-	{
+	seatRows: [{
 		seatRow: number,
 		seats: [
 		{
-			seatId: number,
+			seatId:number,
 			place: number,
-			ticketTypeId: number
+			ticketTypeId: string
 		}]
 	}]
   }
   
+  interface InCartTickets {
+	ticketTypeId: string,
+    seatId: number
+  }
+
+  interface OrderResponse{
+	message: string, 
+	orderId: string,
+	tickets: InCartTickets[],
+	user: User,
+	totalAmount: number
+  }
 
 function App() {
 	const userPassword = "Nfctron2025" 
 	const userEmail = "frontend@nfctron.com"
 	const [userSess, setUserSess] = useState<Session[]>([]);
 	const [isOpen, setIsOpen] = useState(false);
-	const [isLoggedIn, setIsLoggedIn] = useState(false);
+	const [openPopOver, setOpenPopOver] = useState(false);
 	const [eventInfo, setEventInfo] = useState<EventInfo[]>([]);
 	const [eventTickets, setEventTickets] = useState<EventTickets[]>([]);
-	
+	const [totalPrice, setTotalPrice] = useState(0);
+	const [cart, setCart] = useState<InCartTickets[]>([]);
+	const [orderResponse, setOrderResponse] = useState<OrderResponse>({message: "", orderId: "",tickets:[], user:{firstName:"",lastName:"",email:""}, totalAmount:0});
+	const [hostEmail, setHostEmail] = useState("")
+	const [hostFirstName, setHostFirstName] = useState("")
+	const [hostLastName, setHostLastName] = useState("")
+	const [isLoading, setIsLoading] = useState(false)
+	const [language, setLanguage] = useState(true)
 
 	async function sendLogInfo(userEmail: string, userPassword: string) {
 
@@ -83,11 +103,36 @@ function App() {
 		
 		localStorage.setItem("session", JSON.stringify(user));
 		setUserSess([user]);
-		setIsLoggedIn(true)
+		setOpenPopOver(true)
 
 		} catch(e){
 			console.error(e)
 		} 
+	}
+
+	async function sendOrder(eventId: number, tickets: InCartTickets[], user: User ) {
+		setIsLoading(true)
+
+		try{
+        const response = await fetch("https://nfctron-frontend-seating-case-study-2024.vercel.app/order", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ eventId: eventId, tickets: tickets, user: user })
+        });
+
+        const order = await response.json();
+		console.log(order);
+		
+		setOrderResponse(order)
+		setOpenPopOver(true)
+
+		} catch(e){
+			console.error(e)
+		} finally{
+			setIsLoading(false)
+		}
 	}
 
 	async function getEvent (){
@@ -96,21 +141,20 @@ function App() {
 			const event = await response.json()
 
 			setEventInfo([event]);	
-
+			
 		} catch(e){
 			console.error(e)
 		} 
 	}
 
+	
 	async function getEventTickets (eventId: number){
 		try{
 			const response = await fetch(`https://nfctron-frontend-seating-case-study-2024.vercel.app/event-tickets?eventId=${eventId}`)
 			const tickets = await response.json()
-
+			
 			setEventTickets([tickets])
-			console.log(eventTickets);
-
-
+				
 		} catch(e){
 			console.error(e)
 		}
@@ -128,17 +172,17 @@ function App() {
 	}, [eventInfo])
 	
 	useEffect(() => {
-		if (isLoggedIn) {
+		if (openPopOver) {
 			setIsOpen(true);
 		
 			const timer = setTimeout(() => {
 				setIsOpen(false); 
-				setIsLoggedIn(false)
+				setOpenPopOver(false)
 			}, 2000);
 
 			return () => clearTimeout(timer);
 		}
-	}, [isLoggedIn]);  
+	}, [openPopOver]);  
 
 	function Logout () {
         localStorage.clear();
@@ -153,6 +197,25 @@ function App() {
 		}
 		return setUserSess([JSON.parse(sessionString)]);	
 	}
+	
+	function addToCart (typeID: string, seatID: number, price: number){
+		setTotalPrice(totalPrice + price);
+		setCart([...cart, {ticketTypeId:typeID , seatId: seatID}]);
+	}
+	
+	function deleteFromCart (seatID: number, price: number){
+		setTotalPrice(totalPrice - price);
+		setCart(cart.filter(ticket => ticket.seatId !== seatID));
+	}
+	
+	async function AddEventToCalendar (event: EventInfo){
+		const googleCalendarURL = `https://www.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(event.namePub)}&dates=${event.dateFrom}/${event.dateTo}&location=${encodeURIComponent(event.place)}&details=${encodeURIComponent(event.description)}`;
+		try{
+			window.open(googleCalendarURL, '_blank');
+		} catch(e){
+			console.error(e)
+		} 
+	}
 
 	return (
 		<div className="flex flex-col grow">
@@ -160,12 +223,36 @@ function App() {
 			<nav className="sticky top-0 left-0 right-0 bg-white border-b border-zinc-200 flex justify-center">
 				{/* inner content */}
 				<div className="max-w-screen-lg p-4 grow flex items-center justify-between gap-3">
+					{/* language change button */}
+					<Button  onClick={() => setLanguage(!language)}>
+						{ language ? 
+						"eng" 
+						: 
+						"cze"
+						}	
+					</Button>
 					{/* application/author image/logo placeholder */}
 					<div className="max-w-[250px] w-full flex">
-						<div className="bg-zinc-100 rounded-md size-12" />
+						<img src={profilePic} alt="Authors image" className="bg-zinc-100 rounded-md size-12" />
 					</div>
+						{/* login and order popover */}
+						<Popover open={isOpen} onOpenChange={setIsOpen}>
+							<PopoverTrigger>
+							</PopoverTrigger>
+							<PopoverContent className="flex justify-center"	
+							> 		
+							{
+							orderResponse.message? 
+								<span className="text-center">{orderResponse.message === "Invalid request body" ? "Fill valid credentials" : orderResponse.message }</span>
+
+							: 	
+								<span  className="text-center">{userSess?.[0]?.message}</span>
+							}
+							</PopoverContent>
+						</Popover>
 					{/* app/author title/name placeholder */}
-					<div className="bg-zinc-100 rounded-md h-8 w-[200px]" />
+					<span className="flex items-center justify-center text-center bg-zinc-100 rounded-md h-8 w-[200px] text-sm text-black">Bc. Novotný David</span>
+
 					{/* user menu */}
 					<div className="max-w-[250px] w-full flex justify-end">
 						{ 
@@ -173,19 +260,12 @@ function App() {
 								<>
 								{userSess.map((props, key) => (									
 								<div key={key}>
-									<Popover open={isOpen} onOpenChange={setIsOpen}>	
-										<PopoverTrigger>
-										</PopoverTrigger>
-										<PopoverContent > 
-											<p>{props.message}</p>
-										</PopoverContent>
-									</Popover>		
 									<DropdownMenu>
 										<DropdownMenuTrigger asChild>
 											<Button variant="secondary">
 													<div className="flex items-center gap-2">
 														<Avatar>
-															<AvatarImage src={`https://source.boringavatars.com/marble/120/${props.user.email}?colors=25106C,7F46DB`} />
+															<AvatarImage src={`https://boringavatars.com/marble/120/${props.user.email}?colors=25106C,7F46DB`} />
 															<AvatarFallback>CN</AvatarFallback>
 														</Avatar>
 														<div className="flex flex-col text-left">
@@ -200,7 +280,11 @@ function App() {
 											<DropdownMenuSeparator />
 											<DropdownMenuGroup>
 												<DropdownMenuItem onClick={() => Logout ()}>
-													Logout
+													{language ? 
+													"Logout" 
+													: 
+													"Odlhášení"
+													}
 												</DropdownMenuItem>
 											</DropdownMenuGroup>
 										</DropdownMenuContent>
@@ -210,7 +294,11 @@ function App() {
 									</>
 							) : (	
 								<Button variant="secondary" onClick={() => sendLogInfo(userEmail, userPassword)}>
-									Login or register 
+									{language ? 
+									"Login or register "
+									: 
+									"Přihlášení nebo registrace" 
+									}
 								</Button>			
 							)
 						}
@@ -223,16 +311,26 @@ function App() {
 				{/* inner content */}
 				<div className="max-w-screen-lg m-auto p-4 flex items-start grow gap-3 w-full">
 					{/* seating card */}
-					<div className="bg-white rounded-md grow grid p-3 self-stretch shadow-sm" style={{
+					<div className="flex overflow-auto bg-white rounded-md grow grid p-3 self-stretch shadow-sm" style={{
 						gridTemplateColumns: 'repeat(auto-fill, minmax(40px, 1fr))',
 						gridAutoRows: '40px'
 					}}>
 						{/*	seating map */}
-						{
-							Array.from({ length: 100 }, (_, i) => (
-								<Seat key={i} />
-							))
-						}
+						<div className="flex flex-col gap-3">
+							{eventTickets.map((tickets) =>
+								tickets.seatRows.map((row) => (
+									<div key={row.seatRow} className="flex gap-3 items-center">
+										<span className="text-sm text-zinc-900 font-bold w-6">{language? "Row"  : "Řada" }</span>
+										<span className="text-sm text-zinc-500 font-bold w-6">{row.seatRow}</span>								
+										{row.seats.map((seat) => (
+										tickets.ticketTypes.map((type) =>(type.id === seat.ticketTypeId ? <Seat addToCart={addToCart} deleteFromCart={deleteFromCart} key={seat.seatId} seat={seat} type={type} /> :
+											null
+										))
+										))}
+									</div>
+									))
+							)}
+						</div>
 					</div>
 					
 					{/* event info */}
@@ -246,8 +344,12 @@ function App() {
 						{/* event description */}
 						<p className="text-sm text-zinc-500">{props.description}</p>
 						{/* add to calendar button */}
-						<Button variant="secondary">
-							Add to calendar
+						<Button variant="secondary" onClick={() => AddEventToCalendar(props)}>
+							{language ? 
+							"Add to google calendar" 
+							: 
+							"Přidat do google kalendáře"
+							}
 						</Button>
 						</aside>
 					))}
@@ -260,14 +362,51 @@ function App() {
 				<div className="max-w-screen-lg p-6 flex justify-between items-center gap-4 grow">
 					{/* total in cart state */}
 					<div className="flex flex-col">
-						<span className="text-zinc-500">Total for [?] tickets</span>
-						<span className="text-2xl font-semibold text-zinc-900  ">[?] {eventInfo[0]?.currencyIso}</span>
+						<span className="text-zinc-500">{language ? `Total for ${cart.length} tickets` : `Celkem za ${cart.length} vstupenek`}</span>
+						<span className="text-2xl font-semibold text-zinc-900  ">{totalPrice} {eventInfo[0]?.currencyIso}</span>
 					</div>
 					
-					{/* checkout button */}
-					<Button variant="default">
-						Checkout now
-					</Button>
+					{/* checkout button */}	
+					{ userSess[0] ? 
+						<Button disabled={isLoading} variant="default" onClick={() => sendOrder(eventInfo[0].eventId, cart, userSess[0].user)}>
+						{language ? 
+						isLoading ? "Checking out" : "Checkout now"
+						:
+						isLoading ? "Odesílání" : "Odeslat objednávku"
+						}	
+						</Button>
+					:
+					/* checking out if user is host */
+					<div className="relative">
+						<DropdownMenu>
+						<DropdownMenuTrigger asChild>
+							<Button variant="default" >
+								{language? 
+								"Checkout now"
+								: 
+								"Odeslat objednávku" 
+								}
+							</Button>
+						</DropdownMenuTrigger>						
+						<DropdownMenuContent className="w-[275px] absolute z-10 bottom-0 right-0">
+							<DropdownMenuLabel>{language?  "Login or fill out the required credencials" :  "Přihlaste se nebo vyplňte požadované údaje" }</DropdownMenuLabel>
+							<DropdownMenuSeparator/>
+							<DropdownMenuGroup className="space-y-5 p-4">
+								<input className="bg-white" type="text" placeholder="First Name" value={hostFirstName} onChange={e => setHostFirstName(e.target.value)}/>
+								<input className="bg-white" type="text" placeholder="Last Name" value={hostLastName} onChange={e => setHostLastName(e.target.value)}/>
+								<input className="bg-white" type="text" placeholder="Email" value={hostEmail} onChange={e => setHostEmail(e.target.value)}/>
+								<Button disabled={isLoading || Boolean(!hostFirstName) || Boolean(!hostLastName) || Boolean(!hostEmail)} variant="default" onClick={() => sendOrder(eventInfo[0].eventId, cart, {firstName: hostFirstName, lastName: hostLastName,email: hostEmail})}>
+								{language ? 
+									isLoading ? "Checking out" : "Checkout now"
+								:
+									isLoading ? "Odesílání" : "Odeslat objednávku"
+								}	
+								</Button>
+							</DropdownMenuGroup>
+						</DropdownMenuContent>
+						</DropdownMenu>
+					</div>
+					}	
 				</div>
 			</nav>
 		</div>

@@ -1,31 +1,50 @@
 import { Button } from '@/components/ui/button.tsx';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover.tsx';
 import { cn } from '@/lib/utils.ts';
-import React from 'react';
+import React, { useState } from 'react';
+
 
 interface SeatProps extends React.HTMLAttributes<HTMLElement> {
+	addToCart: (
+				typeId: string,
+				seatId: number, 
+				price: number) => void,  
+	deleteFromCart: (
+					seatId: number, 
+					price: number) => void,
+	seat: {
+		seatId: number;
+		place: number;
+		ticketTypeId: string;
+	};
+	type: {
+		id: string,
+		name: string,
+		price: number
+	}
 }
 
 export const Seat = React.forwardRef<HTMLDivElement, SeatProps>((props, ref) => {
-	const isInCart = false;
+	const [isInCart, setIsInCart] = useState(false);
+
 	return (
 		<Popover>
 			<PopoverTrigger>
-				<div className={cn('size-8 rounded-full bg-zinc-100 hover:bg-zinc-200 transition-color', props.className)}
-				     ref={ref}>
-					<span className="text-xs text-zinc-400 font-medium">[n]</span>
+				<div className={cn(`size-8 rounded-full ${isInCart ? "bg-blue-500" : "bg-zinc-500"} hover:bg-zinc-800 transition-color`, props.className)}
+					ref={ref}>
+					<span className="text-xs text-white font-medium">{props.seat.place}</span>
 				</div>
 			</PopoverTrigger>
 			<PopoverContent>
-				<pre>{JSON.stringify({ seatData: null }, null, 2)}</pre>
+				<pre className='mb-5'>{`Cena lístku: ${props.type.price} \nTyp lístku: ${props.type.name}`}</pre>
 				
 				<footer className="flex flex-col">{
 					isInCart ? (
-						<Button disabled variant="destructive" size="sm">
+						<Button  variant="destructive" size="sm" onClick={() =>  {props.deleteFromCart(props.seat.seatId, props.type.price), setIsInCart(!isInCart)}}>
 							Remove from cart
 						</Button>
 					) : (
-						<Button disabled variant="default" size="sm">
+						<Button  variant="default" size="sm" onClick={() => {props.addToCart(props.seat.ticketTypeId, props.seat.seatId, props.type.price), setIsInCart(!isInCart)}}>
 							Add to cart
 						</Button>
 					)
