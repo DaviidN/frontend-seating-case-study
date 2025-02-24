@@ -293,7 +293,7 @@ function App() {
 													{language ? 
 													"Logout" 
 													: 
-													"Odlhášení"
+													"Odhlášení"
 													}
 												</DropdownMenuItem>
 											</DropdownMenuGroup>
@@ -333,7 +333,7 @@ function App() {
 										<span className="text-sm text-zinc-900 font-bold w-6">{language? "Row"  : "Řada" }</span>
 										<span className="text-sm text-zinc-500 font-bold w-6">{row.seatRow}</span>								
 										{row.seats.map((seat) => (
-										tickets.ticketTypes.map((type) =>(type.id === seat.ticketTypeId ? <Seat addToCart={addToCart} deleteFromCart={deleteFromCart} key={seat.seatId} seat={seat} type={type} /> :
+										tickets.ticketTypes.map((type) =>(type.id === seat.ticketTypeId ? <Seat addToCart={addToCart} deleteFromCart={deleteFromCart} key={seat.seatId} seat={seat} type={type} language={language}/> :
 											null
 										))
 										))}
@@ -398,12 +398,12 @@ function App() {
 								}
 							</Button>
 						</DropdownMenuTrigger>						
-						<DropdownMenuContent className="w-[275px] absolute z-10 bottom-0 right-0">
+						<DropdownMenuContent className="w-[275px] absolute z-10 bottom-0 -left-[90px] ">
 							<DropdownMenuLabel>{language?  "Login or fill out the required credencials" :  "Přihlaste se nebo vyplňte požadované údaje" }</DropdownMenuLabel>
 							<DropdownMenuSeparator/>
 							<DropdownMenuGroup className="space-y-5 p-4">
-								<input className="bg-white" type="text" placeholder="First Name" value={hostFirstName} onChange={e => setHostFirstName(e.target.value)}/>
-								<input className="bg-white" type="text" placeholder="Last Name" value={hostLastName} onChange={e => setHostLastName(e.target.value)}/>
+								<input className="bg-white" type="text" placeholder={language ?"First Name":"Jméno"} value={hostFirstName} onChange={e => setHostFirstName(e.target.value)}/>
+								<input className="bg-white" type="text" placeholder={language ?"Last Name":"Příjmení"} value={hostLastName} onChange={e => setHostLastName(e.target.value)}/>
 								<input className="bg-white" type="text" placeholder="Email" value={hostEmail} onChange={e => setHostEmail(e.target.value)}/>
 								<Button disabled={isLoading || Boolean(!hostFirstName) || Boolean(!hostLastName) || Boolean(!hostEmail)} variant="default" onClick={() => sendOrder(eventInfo[0].eventId, cart, {firstName: hostFirstName, lastName: hostLastName,email: hostEmail})}>
 								{language ? 

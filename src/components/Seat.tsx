@@ -22,6 +22,7 @@ interface SeatProps extends React.HTMLAttributes<HTMLElement> {
 		name: string,
 		price: number
 	}
+	language: boolean
 }
 
 export const Seat = React.forwardRef<HTMLDivElement, SeatProps>((props, ref) => {
@@ -29,23 +30,25 @@ export const Seat = React.forwardRef<HTMLDivElement, SeatProps>((props, ref) => 
 
 	return (
 		<Popover>
+			{/* Seat icon */}
 			<PopoverTrigger>
 				<div className={cn(`size-8 rounded-full ${isInCart ? "bg-blue-500" : "bg-zinc-500"} hover:bg-zinc-800 transition-color`, props.className)}
 					ref={ref}>
 					<span className="text-xs text-white font-medium">{props.seat.place}</span>
 				</div>
 			</PopoverTrigger>
+			{/* Ticket info */}
 			<PopoverContent>
-				<pre className='mb-5'>{`Cena lístku: ${props.type.price} \nTyp lístku: ${props.type.name}`}</pre>
+				<pre className='mb-5'>{ props.language ? `Ticket price ${props.type.price} \n Ticket type: ${props.type.name}` :`Cena lístku: ${props.type.price} \nTyp lístku: ${props.type.name === "Regular ticket" ? "Základní lístek" : "VIP lístek" }`}</pre>
 				{/* Cart buttons */}
 				<footer className="flex flex-col">{
 					isInCart ? (
 						<Button  variant="destructive" size="sm" onClick={() =>  {props.deleteFromCart(props.seat.seatId, props.type.price), setIsInCart(!isInCart)}}>
-							Remove from cart
+						{props.language ? 	"Remove from cart" : "Odebrat z košíku"}
 						</Button>
 					) : (
 						<Button  variant="default" size="sm" onClick={() => {props.addToCart(props.seat.ticketTypeId, props.seat.seatId, props.type.price), setIsInCart(!isInCart)}}>
-							Add to cart
+						{props.language ? 	"Add to cart" : "Přidat do košíku"}
 						</Button>
 					)
 				}</footer>
