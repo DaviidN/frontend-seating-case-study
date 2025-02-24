@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/popover';
 import { useState, useEffect } from "react";
 import './App.css';
-import profilePic from "./imgs/Profilovy_obrazek1.jpg"
+import profilePic from "./imgs/Profilovy_obrazek.jpg"
 
  interface Session {
     message: string,
