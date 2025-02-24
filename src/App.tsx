@@ -88,6 +88,7 @@ function App() {
 	const [isLoading, setIsLoading] = useState(false)
 	const [language, setLanguage] = useState(true)
 
+	/* Login */
 	async function sendLogInfo(userEmail: string, userPassword: string) {
 
 		try{
@@ -110,6 +111,7 @@ function App() {
 		} 
 	}
 
+	/* Sending order */
 	async function sendOrder(eventId: number, tickets: InCartTickets[], user: User ) {
 		setIsLoading(true)
 
@@ -135,6 +137,7 @@ function App() {
 		}
 	}
 
+	/* Getting event info */
 	async function getEvent (){
 		try{
 			const response = await fetch("https://nfctron-frontend-seating-case-study-2024.vercel.app/event")
@@ -147,7 +150,7 @@ function App() {
 		} 
 	}
 
-	
+	/* Getting tickets and seats for event */
 	async function getEventTickets (eventId: number){
 		try{
 			const response = await fetch(`https://nfctron-frontend-seating-case-study-2024.vercel.app/event-tickets?eventId=${eventId}`)
@@ -160,17 +163,20 @@ function App() {
 		}
 	}
 
+	/* Getting user and event info */
 	useEffect(() => {
 		getUser();
 		getEvent();
 	}, [])
 
+	/* Getting event tickets and seats */
 	useEffect(() => {
 		if (eventInfo[0]?.eventId) { 
 			getEventTickets(eventInfo[0].eventId);
 		}
 	}, [eventInfo])
 	
+	/* Opening popover when order is sent or when user is logged in*/
 	useEffect(() => {
 		if (openPopOver) {
 			setIsOpen(true);
@@ -184,11 +190,13 @@ function App() {
 		}
 	}, [openPopOver]);  
 
+	/* Logout function */
 	function Logout () {
         localStorage.clear();
         window.location.reload();
     }
 	
+	/* Getting user from local storage */
 	function getUser() {
 		const sessionString = localStorage.getItem("session");
 
@@ -198,6 +206,7 @@ function App() {
 		return setUserSess([JSON.parse(sessionString)]);	
 	}
 	
+	/* Adding and deleting tickets to cart */
 	function addToCart (typeID: string, seatID: number, price: number){
 		setTotalPrice(totalPrice + price);
 		setCart([...cart, {ticketTypeId:typeID , seatId: seatID}]);
@@ -208,6 +217,7 @@ function App() {
 		setCart(cart.filter(ticket => ticket.seatId !== seatID));
 	}
 	
+	/* Opening URL of users google calendar */
 	async function AddEventToCalendar (event: EventInfo){
 		const googleCalendarURL = `https://www.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(event.namePub)}&dates=${event.dateFrom}/${event.dateTo}&location=${encodeURIComponent(event.place)}&details=${encodeURIComponent(event.description)}`;
 		try{

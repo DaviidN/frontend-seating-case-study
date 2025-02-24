@@ -37,7 +37,7 @@ export const Seat = React.forwardRef<HTMLDivElement, SeatProps>((props, ref) => 
 			</PopoverTrigger>
 			<PopoverContent>
 				<pre className='mb-5'>{`Cena lístku: ${props.type.price} \nTyp lístku: ${props.type.name}`}</pre>
-				
+				{/* Cart buttons */}
 				<footer className="flex flex-col">{
 					isInCart ? (
 						<Button  variant="destructive" size="sm" onClick={() =>  {props.deleteFromCart(props.seat.seatId, props.type.price), setIsInCart(!isInCart)}}>
